@@ -51,13 +51,21 @@
       box-shadow: 0 12px 34px rgb(23 32 51 / 10%);
     }
 
-    .tabs {
+    .top-bar {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
       padding: 12px;
       border-bottom: 1px solid var(--line);
       background: #f8fafc;
+    }
+
+    .tabs {
+      display: flex;
+      flex: 1 1 auto;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .tab-button {
@@ -82,6 +90,38 @@
       background: var(--active);
       border-color: var(--active);
       color: #fff;
+    }
+
+    .export-controls {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .export-select,
+    .export-button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: 700 14px/1 Arial, Helvetica, sans-serif;
+      min-height: 38px;
+    }
+
+    .export-select {
+      padding: 0 34px 0 10px;
+    }
+
+    .export-button {
+      cursor: pointer;
+      padding: 0 14px;
+      transition: background .16s ease, border-color .16s ease, color .16s ease;
+    }
+
+    .export-button:hover {
+      border-color: var(--active);
+      background: var(--active-soft);
     }
 
     .diagram-header {
@@ -235,20 +275,42 @@
       display: none;
     }
 
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     @media (max-width: 720px) {
       .page {
         padding: 10px;
       }
 
-      .tabs {
+      .top-bar {
         gap: 6px;
         padding: 8px;
+      }
+
+      .tabs,
+      .export-controls {
+        flex: 1 1 100%;
       }
 
       .tab-button {
         flex: 1 1 100%;
         justify-content: center;
         min-height: 40px;
+      }
+
+      .export-select,
+      .export-button {
+        flex: 1 1 0;
       }
 
       .diagram-header {
@@ -268,11 +330,21 @@
 <body>
   <main class="page">
     <section class="workspace" aria-label="CIAM architecture diagram workspace">
-      <nav class="tabs" role="tablist" aria-label="Architecture views">
-        <button class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="diagram-panel" id="tab-logical" data-view="logical">Logical Architecture</button>
-        <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-management" data-view="management">Management Services Physical Architecture</button>
-        <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-authentication" data-view="authentication">User Authentication Physical Architecture</button>
-      </nav>
+      <div class="top-bar">
+        <nav class="tabs" role="tablist" aria-label="Architecture views">
+          <button class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="diagram-panel" id="tab-logical" data-view="logical">Logical Architecture</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-management" data-view="management">Management Services Physical Architecture</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-authentication" data-view="authentication">User Authentication Physical Architecture</button>
+        </nav>
+        <div class="export-controls">
+          <label class="sr-only" for="export-format">Download format</label>
+          <select class="export-select" id="export-format" aria-label="Download format">
+            <option value="txt">Text file</option>
+            <option value="csv">CSV file</option>
+          </select>
+          <button class="export-button" type="button" id="download-details">Download Details</button>
+        </div>
+      </div>
 
       <section id="diagram-panel" role="tabpanel" aria-labelledby="tab-logical">
         <div class="diagram-header">
@@ -304,6 +376,8 @@
     const summary = document.getElementById("diagram-summary");
     const panel = document.getElementById("diagram-panel");
     const tooltip = document.getElementById("tooltip");
+    const exportFormat = document.getElementById("export-format");
+    const downloadDetails = document.getElementById("download-details");
 
     const diagrams = {
       logical: {
@@ -769,6 +843,16 @@
       }
     };
 
+    const detailFields = [
+      ["purpose", "Purpose"],
+      ["bespoke", "Bespoke"],
+      ["scalability", "Current Scalability"],
+      ["scalePlan", "Plan to Scale"],
+      ["geo", "Geo Redundancy"],
+      ["backup", "Backup"],
+      ["gdpr", "GDPR"]
+    ];
+
     function append(tag, attrs, parent = root) {
       const el = document.createElementNS(ns, tag);
       Object.entries(attrs || {}).forEach(([key, value]) => {
@@ -1020,15 +1104,8 @@
         tooltip.appendChild(title);
 
         const list = document.createElement("dl");
-        [
-          ["Purpose", details.purpose],
-          ["Bespoke", details.bespoke],
-          ["Current Scalability", details.scalability],
-          ["Plan to Scale", details.scalePlan],
-          ["Geo Redundancy", details.geo],
-          ["Backup", details.backup],
-          ["GDPR", details.gdpr]
-        ].forEach(([term, value]) => {
+        detailFields.forEach(([key, term]) => {
+          const value = details[key];
           if (!value) return;
           const dt = document.createElement("dt");
           dt.textContent = term;
@@ -1067,6 +1144,88 @@
         node.setAttribute("tabindex", "0");
       });
     }
+
+    function componentName(node) {
+      if (node.details && node.details.title) return node.details.title;
+      if (Array.isArray(node.label)) return node.label.join(" ");
+      return node.label || node.id;
+    }
+
+    function collectHoverDetails() {
+      return Object.values(diagrams).flatMap(diagram => (
+        diagram.nodes
+          .filter(node => node.details || node.note)
+          .map(node => ({
+            page: diagram.title,
+            component: componentName(node),
+            note: node.note || "",
+            ...(node.details || {})
+          }))
+      ));
+    }
+
+    function formatDetailsAsText(rows) {
+      return [
+        "CIAM Architecture Component Details",
+        "",
+        ...rows.flatMap(row => {
+          const lines = [
+            `${row.page} - ${row.component}`,
+            "=".repeat(`${row.page} - ${row.component}`.length),
+            `Page: ${row.page}`,
+            `Component: ${row.component}`
+          ];
+
+          detailFields.forEach(([key, label]) => {
+            if (row[key]) lines.push(`${label}: ${row[key]}`);
+          });
+
+          if (row.note) lines.push(`Note: ${row.note}`);
+          return [...lines, ""];
+        })
+      ].join("\r\n");
+    }
+
+    function csvCell(value) {
+      return `"${String(value || "").replace(/"/g, '""')}"`;
+    }
+
+    function formatDetailsAsCsv(rows) {
+      const headers = ["Page", "Component", ...detailFields.map(([, label]) => label), "Note"];
+      const body = rows.map(row => [
+        row.page,
+        row.component,
+        ...detailFields.map(([key]) => row[key] || ""),
+        row.note || ""
+      ].map(csvCell).join(","));
+
+      return [headers.map(csvCell).join(","), ...body].join("\r\n");
+    }
+
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadAllHoverDetails() {
+      const rows = collectHoverDetails();
+      const format = exportFormat.value;
+      const isCsv = format === "csv";
+      downloadFile(
+        `ciam-architecture-component-details.${isCsv ? "csv" : "txt"}`,
+        isCsv ? formatDetailsAsCsv(rows) : formatDetailsAsText(rows),
+        isCsv ? "text/csv;charset=utf-8" : "text/plain;charset=utf-8"
+      );
+    }
+
+    downloadDetails.addEventListener("click", downloadAllHoverDetails);
 
     document.querySelectorAll(".tab-button").forEach(button => {
       button.addEventListener("click", () => {
