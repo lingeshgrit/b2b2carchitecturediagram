@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CIAM Architecture Diagrams</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5d667a;
+      --paper: #fff;
+      --page: #eef1f5;
+      --line: #c7ced9;
+      --active: #1f5f8b;
+      --active-soft: #e6f1fa;
+      --tenant: #dbeef3;
+      --vnet: #ebf1df;
+      --front-door: #f9c499;
+      --b2c: #fee599;
+      --api: #92d050;
+      --portal: #92cddc;
+      --lavender: #ddd6e5;
+      --pink: #e5b9b5;
+      --vault: #54426a;
+      --cosmos: #bf9000;
+      --salesforce: #b9d7f0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 22px;
+    }
+
+    .workspace {
+      width: min(100%, 1340px);
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid #d9dde3;
+      box-shadow: 0 12px 34px rgb(23 32 51 / 10%);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .tab-button {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font: 700 14px/1 Arial, Helvetica, sans-serif;
+      min-height: 38px;
+      padding: 0 14px;
+      transition: background .16s ease, border-color .16s ease, color .16s ease;
+    }
+
+    .tab-button:hover {
+      border-color: var(--active);
+      background: var(--active-soft);
+    }
+
+    .tab-button[aria-selected="true"] {
+      background: var(--active);
+      border-color: var(--active);
+      color: #fff;
+    }
+
+    .diagram-header {
+      padding: 18px 22px 8px;
+    }
+
+    .diagram-header h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    .diagram-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      max-width: 900px;
+    }
+
+    .diagram-frame {
+      overflow: auto;
+      padding: 12px 18px 20px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 980px;
+      height: auto;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .boundary {
+      stroke: #8893a5;
+      stroke-width: 1.2;
+    }
+
+    .lane {
+      fill: #f8fafc;
+      stroke: #d4dae4;
+      stroke-width: 1;
+    }
+
+    .node {
+      cursor: default;
+      transition: opacity .15s ease;
+    }
+
+    .node-shape {
+      stroke: #111827;
+      stroke-width: 1.2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .connector {
+      fill: none;
+      stroke: #111827;
+      stroke-width: 1.4;
+      vector-effect: non-scaling-stroke;
+      marker-end: url(#arrow);
+      transition: opacity .15s ease, stroke-width .15s ease;
+    }
+
+    .label {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      pointer-events: none;
+      text-anchor: middle;
+    }
+
+    .label.small {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .label.section {
+      fill: #28364d;
+      font-size: 18px;
+      text-anchor: start;
+    }
+
+    .label.note {
+      fill: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .actor-line {
+      stroke: #111827;
+      stroke-width: 2;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .is-dimmed {
+      opacity: .22;
+    }
+
+    .is-highlight .node-shape,
+    .connector.is-highlight {
+      stroke: var(--active);
+      stroke-width: 2.8;
+    }
+
+    .connector.is-highlight {
+      opacity: 1;
+    }
+
+    .tooltip {
+      position: fixed;
+      z-index: 10;
+      max-width: 380px;
+      padding: 10px 12px;
+      border: 1px solid #b9c2cf;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 8px 24px rgb(23 32 51 / 18%);
+      font-size: 12px;
+      line-height: 1.4;
+      pointer-events: none;
+      transform: translate(12px, 12px);
+    }
+
+    .tooltip-title {
+      margin: 0 0 6px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .tooltip dl {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 4px 8px;
+      margin: 0;
+    }
+
+    .tooltip dt {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .tooltip dd {
+      margin: 0;
+    }
+
+    .tooltip[hidden] {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 10px;
+      }
+
+      .tabs {
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .tab-button {
+        flex: 1 1 100%;
+        justify-content: center;
+        min-height: 40px;
+      }
+
+      .diagram-header {
+        padding: 14px 14px 6px;
+      }
+
+      .diagram-header h1 {
+        font-size: 20px;
+      }
+
+      .diagram-frame {
+        padding: 8px 10px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="workspace" aria-label="CIAM architecture diagram workspace">
+      <nav class="tabs" role="tablist" aria-label="Architecture views">
+        <button class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="diagram-panel" id="tab-logical" data-view="logical">Logical Architecture</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-management" data-view="management">Management Services Physical Architecture</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="diagram-panel" id="tab-authentication" data-view="authentication">User Authentication Physical Architecture</button>
+      </nav>
+
+      <section id="diagram-panel" role="tabpanel" aria-labelledby="tab-logical">
+        <div class="diagram-header">
+          <h1 id="diagram-heading">Logical Architecture</h1>
+          <p id="diagram-summary">Conceptual request flow for administrative and authentication capabilities.</p>
+        </div>
+        <div class="diagram-frame">
+          <svg id="diagram" viewBox="0 0 1200 720" role="img" aria-label="Logical Architecture">
+            <desc id="diagram-desc">Conceptual request flow for administrative and authentication capabilities.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827"></path>
+              </marker>
+            </defs>
+            <g id="diagram-root"></g>
+          </svg>
+        </div>
+      </section>
+    </section>
+  </main>
+  <div class="tooltip" id="tooltip" hidden></div>
+
+  <script>
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.getElementById("diagram");
+    const root = document.getElementById("diagram-root");
+    const desc = document.getElementById("diagram-desc");
+    const heading = document.getElementById("diagram-heading");
+    const summary = document.getElementById("diagram-summary");
+    const panel = document.getElementById("diagram-panel");
+    const tooltip = document.getElementById("tooltip");
+
+    const diagrams = {
+      logical: {
+        title: "Logical Architecture",
+        summary: "Conceptual request flow for administrative and authentication capabilities.",
+        viewBox: "0 0 1200 720",
+        lanes: [
+          { label: "Management / Administrative", x: 40, y: 45, w: 1120, h: 320 },
+          { label: "Authentication", x: 40, y: 390, w: 1120, h: 250 }
+        ],
+        nodes: [
+          { id: "customer-admins", type: "actor", x: 215, y: 145, label: ["Customer", "Admins"], note: "Organization administrators for customer-managed administration." },
+          { id: "acuity-admins", type: "actor", x: 215, y: 280, label: ["Acuity", "Admins"], note: "Internal administrators who manage users and configuration." },
+          { id: "admin-api", x: 530, y: 148, w: 190, h: 80, fill: "var(--api)", label: ["Administrative", "Services API"], note: "Administrative API surface used by admin experiences." },
+          { id: "admin-cosmos", type: "database", x: 895, y: 128, w: 160, h: 92, fill: "var(--cosmos)", label: ["User Data", "in Cosmos DB"], note: "User profile, application, and operational identity data." },
+          { id: "admin-entra", x: 895, y: 242, w: 190, h: 62, fill: "var(--b2c)", label: ["Entra /", "Azure AD B2C"], note: "Identity tenant and policy execution surface." },
+          { id: "end-user", type: "actor", x: 195, y: 498, label: ["End", "User"], note: "Consumer or business end user authenticating into the experience." },
+          { id: "auth-entra", x: 390, y: 464, w: 190, h: 76, fill: "var(--b2c)", label: ["Entra /", "Azure AD B2C"], note: "Authenticates the end user and invokes runtime integration APIs." },
+          { id: "runtime-apis", x: 670, y: 464, w: 180, h: 76, fill: "var(--api)", label: ["Runtime", "APIs"], note: "Runtime integration APIs called during or after authentication." },
+          { id: "auth-cosmos", type: "database", x: 985, y: 413, w: 160, h: 92, fill: "var(--cosmos)", label: ["User Data", "in Cosmos DB"], note: "Runtime user profile and identity data store." },
+          { id: "salesforce", x: 985, y: 546, w: 160, h: 72, fill: "var(--salesforce)", label: ["Salesforce"], note: "Downstream CRM and customer data system." }
+        ],
+        links: [
+          { from: "acuity-admins", to: "admin-api" },
+          { from: "customer-admins", to: "admin-api" },
+          { from: "admin-api", to: "admin-cosmos" },
+          { from: "admin-api", to: "admin-entra" },
+          { from: "end-user", to: "auth-entra" },
+          { from: "auth-entra", to: "runtime-apis" },
+          { from: "runtime-apis", to: "auth-cosmos" },
+          { from: "runtime-apis", to: "salesforce" }
+        ]
+      },
+      management: {
+        title: "Management Services Physical Architecture",
+        summary: "Focused physical view for West US management services, global identity and ingress, and external SaaS dependencies.",
+        viewBox: "0 0 1350 720",
+        boundaries: [
+          { label: "Azure Subscription", x: 225, y: 40, w: 905, h: 600, fill: "var(--tenant)" },
+          { label: "CIAM VNET (West US)", x: 475, y: 150, w: 585, h: 425, fill: "var(--vnet)" }
+        ],
+        nodes: [
+          { id: "acuity-admins", type: "actor", x: 105, y: 235, label: ["Acuity", "Admins"], note: "Internal administrators entering through managed administrative experiences." },
+          { id: "customer-admins", type: "actor", x: 105, y: 395, label: ["Customer", "Admins"], note: "Customer organization administrators entering through managed administrative experiences." },
+          {
+            id: "front-door",
+            x: 300,
+            y: 292,
+            w: 140,
+            h: 82,
+            fill: "var(--front-door)",
+            label: ["Azure Front", "Door", "(Global)"],
+            details: {
+              title: "Azure Front Door",
+              purpose: "Provides firewall capabilities and a custom domain.",
+              scalability: "Scaled by Microsoft.",
+              scalePlan: "None.",
+              geo: "Managed by Microsoft.",
+              backup: "Configurations are not backed up, but it is a good idea to back them up.",
+              gdpr: "Can be deployed in any region for GDPR."
+            }
+          },
+          {
+            id: "user-management",
+            x: 535,
+            y: 190,
+            w: 175,
+            h: 76,
+            fill: "var(--portal)",
+            label: ["User Management", "Static Web App", "(React Portal)"],
+            details: {
+              title: "User Management Static Web App",
+              purpose: "Administrative UI for user lifecycle management.",
+              bespoke: "Part of GRIT's base B2B2C solution.",
+              scalability: "Static hosting scales automatically for front-end traffic.",
+              scalePlan: "None. It is already scalable.",
+              geo: "Currently deployed in West US; add paired-region hosting if regional failover is required.",
+              backup: "Source code and deployment artifacts are retained in the Git repo and can be used to redeploy at any time.",
+              gdpr: "Deploy the app in every region for GDPR."
+            }
+          },
+          {
+            id: "onboarding",
+            x: 535,
+            y: 315,
+            w: 175,
+            h: 76,
+            fill: "var(--portal)",
+            label: ["Onboarding", "Static Web App", "(React Portal)"],
+            details: {
+              title: "Onboarding Static Web App",
+              purpose: "Defining organizations and setting up federations with customer IDPs.",
+              bespoke: "Part of GRIT's base B2B2C solution.",
+              scalability: "Static hosting scales automatically for frontend traffic.",
+              scalePlan: "None. It is already a scalable architecture.",
+              geo: "Currently deployed in West US; add paired-region hosting if regional failover is required.",
+              backup: "Source code and deployment artifacts are retained in the repository and can be used to redeploy at any point in time. This is a stateless UI service.",
+              gdpr: "Deploy the app in every region for GDPR."
+            }
+          },
+          {
+            id: "admin-api",
+            x: 745,
+            y: 275,
+            w: 165,
+            h: 82,
+            fill: "var(--api)",
+            label: ["Administrative", "Services API", "Function App"],
+            details: {
+              title: "Administrative Services API Function App",
+              purpose: "Stateless API for writing user data into Entra and Cosmos DB, and for setting up a federation.",
+              bespoke: "This is part of GRIT's B2B2C base solution, but it is highly customized for QSC to meet their Salesforce needs.",
+              scalability: "Stateless Function App can scale out based on request volume.",
+              scalePlan: "None. It is already scalable.",
+              geo: "Currently deployed in West US; deploy to a paired region behind Front Door for active/passive or active/active resiliency.",
+              backup: "This is a stateless service; source code and deployment artifacts are backed up in Git.",
+              gdpr: "It has to be deployed into every region for GDPR."
+            }
+          },
+          {
+            id: "entra",
+            x: 595,
+            y: 50,
+            w: 190,
+            h: 82,
+            fill: "var(--b2c)",
+            label: ["Entra /", "Azure AD B2C", "(Global)"],
+            details: {
+              title: "Entra / Azure AD B2C",
+              purpose: "Global identity provider for administrative authentication and token issuance.",
+              bespoke: "Customized as part of GRIT's B2B2C solution.",
+              scalability: "Scale is managed by Microsoft and can easily scale to millions to hundreds of millions of authentications and users.",
+              scalePlan: "None. Managed by Microsoft.",
+              geo: "Global service. Managed by Microsoft.",
+              backup: "Data is not currently backed up. It may be possible to retrieve the data from Cosmos DB except for passwords, but this has not been tested. Implementing periodic backup is recommended.",
+              gdpr: "Entra can be deployed in multiple regions provided by Microsoft, but Entra regions are not as versatile as Cosmos DB regions. Consult the Entra documentation for GDPR deployments."
+            }
+          },
+          {
+            id: "cosmos",
+            type: "database",
+            x: 545,
+            y: 455,
+            w: 155,
+            h: 96,
+            fill: "var(--cosmos)",
+            label: ["User Data", "in Cosmos DB"],
+            details: {
+              title: "User Data in Cosmos DB",
+              purpose: "It is used for storing additional user data along with data regarding the organizations they belong to. It also stores meta data about organizations, applications and federation provider.",
+              scalability: "Scales by provisioned or autoscale throughput and partition strategy.",
+              geo: "Runtime traffic is served only from West US.",
+              backup: "Cosmos DB is backed up to East US; restore procedures should be tested.",
+              gdpr: "To make this GDPR compliant, an instance of Cosmos DB needs to be deployed in every region where the user population belongs to."
+            }
+          },
+          {
+            id: "keyvault",
+            type: "circle",
+            x: 970,
+            y: 505,
+            r: 54,
+            fill: "var(--vault)",
+            label: ["Azure", "Key Vault"],
+            textFill: "#fff",
+            details: {
+              title: "Azure Key Vault",
+              purpose: "Stores secrets, certificates, and keys used by management services.",
+              scalability: "Managed service with regional availability characteristics.",
+              scalePlan: "None.",
+              geo: "Currently deployed in West US; plan paired-region vaults for regional recovery.",
+              backup: "Not tested, TBD.",
+              gdpr: "The service can be deployed in every region, and the secrets for that region will be stored there."
+            }
+          },
+          {
+            id: "federation-metadata",
+            x: 735,
+            y: 455,
+            w: 160,
+            h: 78,
+            fill: "#111827",
+            label: ["Federation", "Metadata", "Blob Storage"],
+            textFill: "#fff",
+            details: {
+              title: "Federation Metadata Blob Storage",
+              purpose: "Stores customers' federation metadata used by management and federation setup workflows.",
+              scalability: "Blob Storage scales automatically for metadata read and write traffic.",
+              scalePlan: "None for scale; monitor request volume and latency as customer federation count grows.",
+              geo: "Currently deployed only in West US and is not geo-replicated. It would be a good idea to geo-replicate it.",
+              backup: "Not currently backed up. It would be a good idea to enable backup or versioning and document restore procedures.",
+              gdpr: "It can be easily converted for GDPR by deploying it into multiple regions and storing each customer's federation metadata in the appropriate region."
+            }
+          },
+          {
+            id: "salesforce",
+            x: 1140,
+            y: 285,
+            w: 150,
+            h: 76,
+            fill: "var(--salesforce)",
+            label: ["Salesforce"],
+            details: {
+              title: "Salesforce",
+              purpose: "External CRM used by QSC."
+            }
+          },
+          {
+            id: "sendgrid",
+            x: 1140,
+            y: 405,
+            w: 150,
+            h: 76,
+            fill: "#111827",
+            label: ["SendGrid"],
+            textFill: "#fff",
+            details: {
+              title: "SendGrid",
+              purpose: "Sending emails, welcoming the user, and any other emails."
+            }
+          }
+        ],
+        links: [
+          { from: "acuity-admins", to: "front-door" },
+          { from: "customer-admins", to: "front-door" },
+          { from: "front-door", to: "user-management" },
+          { from: "front-door", to: "onboarding" },
+          { from: "user-management", to: "admin-api" },
+          { from: "onboarding", to: "admin-api" },
+          { from: "admin-api", to: "entra" },
+          { from: "admin-api", to: "cosmos" },
+          { from: "admin-api", to: "federation-metadata" },
+          { from: "admin-api", to: "salesforce" },
+          { from: "admin-api", to: "sendgrid" },
+          { from: "admin-api", to: "keyvault" }
+        ]
+      },      authentication: {
+        title: "User Authentication Physical Architecture",
+        summary: "Focused physical view for end-user login, B2C policy execution, runtime APIs, Cosmos DB, and external identity/CRM dependencies.",
+        viewBox: "0 -70 1350 870",
+        boundaries: [
+          { label: "Azure Subscription", x: 210, y: 50, w: 930, h: 695, fill: "var(--tenant)" },
+          { label: "CIAM VNET (West US)", x: 650, y: 100, w: 470, h: 625, fill: "var(--vnet)" }
+        ],
+        nodes: [
+          {
+            id: "end-user",
+            type: "actor",
+            x: 105,
+            y: 320,
+            label: ["End User", "Logins"],
+            details: {
+              title: "End User Logins",
+              purpose: "Represents users starting an authentication journey.",
+              scalability: "User volume is handled by the downstream identity and API services.",
+              scalePlan: "Use load testing and sign-in telemetry to validate peak login scenarios.",
+              geo: "Users may connect from any geography; routing depends on global ingress and identity services.",
+              backup: "No system state is stored on this actor.",
+              gdpr: "Provide clear privacy notices and support data subject rights through backend systems."
+            }
+          },
+          {
+            id: "front-door",
+            x: 300,
+            y: 292,
+            w: 140,
+            h: 82,
+            fill: "var(--front-door)",
+            label: ["Azure Front", "Door", "(Global)"],
+            details: {
+              title: "Azure Front Door",
+              purpose: "Provides firewall capabilities and a custom domain.",
+              scalability: "Scaled by Microsoft.",
+              scalePlan: "None.",
+              geo: "Managed by Microsoft.",
+              backup: "Configurations are not backed up, but it is a good idea to back them up.",
+              gdpr: "Can be deployed in any region for GDPR."
+            }
+          },
+          {
+            id: "content",
+            x: 720,
+            y: 145,
+            w: 165,
+            h: 76,
+            fill: "#111827",
+            label: ["B2C Frontend", "Blob Storage"],
+            textFill: "#fff",
+            details: {
+              title: "B2C Frontend Blob Storage",
+              purpose: "Defines the user branding and interactivity. At runtime, Entra / Azure AD B2C pulls these assets in to show the right branding and interactivity.",
+              bespoke: "Yes. Built specifically for QSC to meet their branding needs.",
+              scalability: "Stored in blob storage and exposed via a CDN, so there should be no issue with a high volume of hits.",
+              scalePlan: "None.",
+              geo: "Currently only in West US, but using a CDN it can be scaled to multiple regions.",
+              backup: "All artifacts are in GitHub and can be restored easily.",
+              gdpr: "Can be deployed in every GDPR region."
+            }
+          },
+          {
+            id: "entra",
+            x: 455,
+            y: 285,
+            w: 180,
+            h: 82,
+            fill: "var(--b2c)",
+            label: ["Entra /", "Azure AD B2C", "(Global)"],
+            details: {
+              title: "Entra / Azure AD B2C",
+              purpose: "Global identity provider for administrative authentication and token issuance.",
+              bespoke: "Customized as part of GRIT's B2B2C solution.",
+              scalability: "Scale is managed by Microsoft and can easily scale to millions to hundreds of millions of authentications and users.",
+              scalePlan: "None. Managed by Microsoft.",
+              geo: "Global service. Managed by Microsoft.",
+              backup: "Data is not currently backed up. It may be possible to retrieve the data from Cosmos DB except for passwords, but this has not been tested. Implementing periodic backup is recommended.",
+              gdpr: "Entra can be deployed in multiple regions provided by Microsoft, but Entra regions are not as versatile as Cosmos DB regions. Consult the Entra documentation for GDPR deployments."
+            }
+          },
+          {
+            id: "runtime-apis",
+            x: 720,
+            y: 255,
+            w: 165,
+            h: 82,
+            fill: "var(--api)",
+            label: ["Runtime", "APIs", "Function App"],
+            details: {
+              title: "Runtime APIs",
+              purpose: "Runtime integration during authentication to update Salesforce, retrieve data, decide which federation to use for the user, and decide which applications the user has access to.",
+              bespoke: "This is part of GRIT's B2B2C base solution, but it is highly customized for QSC to meet their Salesforce needs.",
+              scalability: "Stateless Function App can autoscale.",
+              scalePlan: "None. It is already scalable.",
+              geo: "Currently only deployed in West US, but it can be paired with East US for geo-redundancy.",
+              backup: "All code and deployment artifacts are stored in GitHub, so it can easily be restored.",
+              gdpr: "Can be deployed in every region for GDPR."
+            }
+          },
+          {
+            id: "single-logout",
+            x: 755,
+            y: 585,
+            w: 195,
+            h: 94,
+            fill: "var(--api)",
+            label: ["Single Logout", "Endpoint", "Static Web App", "/ Function App"],
+            details: {
+              title: "Single Logout Endpoint",
+              purpose: "Used for single logout across all QSC / Acuyty applications. Sends the logout command to Entra / Azure AD B2C and other applications as appropriate.",
+              bespoke: "Part of GRIT's B2B2C solution.",
+              scalability: "Static Web App / Function App implementation is stateless and can scale out based on request volume.",
+              scalePlan: "Use Azure autoscale and monitor logout traffic, dependency latency, and error rates. Add regional instances if logout volume or availability requirements increase.",
+              geo: "Currently deployed in West US; deploy to a paired region behind Azure Front Door for active/passive or active/active resiliency.",
+              backup: "Source code, configuration, and deployment artifacts should be stored in Git and redeployable through the CI/CD pipeline.",
+              gdpr: "Keep the endpoint stateless where possible, minimize logged personal data, apply retention policies to telemetry, and deploy regional instances where GDPR data residency requires it."
+            }
+          },
+
+          {
+            id: "cosmos",
+            type: "database",
+            x: 705,
+            y: 470,
+            w: 145,
+            h: 94,
+            fill: "var(--cosmos)",
+            label: ["User Data", "in Cosmos DB"],
+            details: {
+              title: "User Data in Cosmos DB",
+              purpose: "It is used for storing additional user data along with data regarding the organizations they belong to. It also stores meta data about organizations, applications and federation provider.",
+              scalability: "Scales by provisioned or autoscale throughput and partition strategy.",
+              geo: "Runtime traffic is served only from West US.",
+              backup: "Cosmos DB is backed up to East US; restore procedures should be tested.",
+              gdpr: "To make this GDPR compliant, an instance of Cosmos DB needs to be deployed in every region where the user population belongs to."
+            }
+          },
+          {
+            id: "keyvault",
+            type: "circle",
+            x: 940,
+            y: 505,
+            r: 52,
+            fill: "var(--vault)",
+            label: ["Azure", "Key Vault"],
+            textFill: "#fff",
+            details: {
+              title: "Azure Key Vault",
+              purpose: "Stores secrets, certificates, and keys used by management services.",
+              scalability: "Managed service with regional availability characteristics.",
+              scalePlan: "None.",
+              geo: "Currently deployed in West US; plan paired-region vaults for regional recovery.",
+              backup: "Not tested, TBD.",
+              gdpr: "The service can be deployed in every region, and the secrets for that region will be stored there."
+            }
+          },
+          {
+            id: "federated-idps",
+            x: 468,
+            y: -40,
+            w: 155,
+            h: 76,
+            fill: "var(--pink)",
+            label: ["Federated", "IdPs"],
+            details: {
+              title: "Federated IdPs",
+              purpose: "These are the IDPs that belong to the customer, used for single sign-on."
+            }
+          },
+          {
+            id: "applications",
+            x: 1145,
+            y: 690,
+            w: 165,
+            h: 86,
+            fill: "var(--lavender)",
+            label: ["QSC / Acuyty", "Applications"],
+            details: {
+              title: "QSC / Acuyty Applications",
+              purpose: "These are the various QSC / Acuyty applications that participate in the login and logout experience."
+            }
+          },
+          {
+            id: "salesforce",
+            x: 1145,
+            y: 340,
+            w: 155,
+            h: 76,
+            fill: "var(--salesforce)",
+            label: ["Salesforce"],
+            details: {
+              title: "Salesforce",
+              purpose: "External CRM used by QSC."
+            }
+          },
+          {
+            id: "sendgrid",
+            x: 1145,
+            y: 460,
+            w: 155,
+            h: 76,
+            fill: "#111827",
+            label: ["SendGrid"],
+            textFill: "#fff",
+            details: {
+              title: "SendGrid",
+              purpose: "Email provider for sending emails to users for password reset, welcome email, and any other email."
+            }
+          }
+        ],
+        links: [
+          { from: "end-user", to: "front-door" },
+          { from: "front-door", to: "entra" },
+          { from: "front-door", to: "single-logout" },
+          { from: "entra", to: "federated-idps" },
+          { from: "content", to: "entra" },
+          { from: "entra", to: "runtime-apis" },
+          { from: "single-logout", to: "entra" },
+          { from: "single-logout", to: "applications" },
+          { from: "runtime-apis", to: "cosmos" },
+          { from: "runtime-apis", to: "salesforce" },
+          { from: "runtime-apis", to: "sendgrid" },
+          { from: "runtime-apis", to: "keyvault" }
+        ]
+      }
+    };
+
+    function append(tag, attrs, parent = root) {
+      const el = document.createElementNS(ns, tag);
+      Object.entries(attrs || {}).forEach(([key, value]) => {
+        if (value !== undefined) el.setAttribute(key, value);
+      });
+      parent.appendChild(el);
+      return el;
+    }
+
+    function lineFor(link, nodesById) {
+      const from = nodesById.get(link.from);
+      const to = nodesById.get(link.to);
+      const start = anchor(from, to);
+      const end = anchor(to, from);
+      const midX = (start.x + end.x) / 2;
+
+      if (link.points && link.points.length) {
+        const points = link.points.map(point => `L ${point.x} ${point.y}`).join(" ");
+        return `M ${start.x} ${start.y} ${points} L ${end.x} ${end.y}`;
+      }
+
+      if (Math.abs(start.y - end.y) < 18 || Math.abs(start.x - end.x) < 18) {
+        return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+      }
+
+      return `M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`;
+    }
+
+    function nodeCenter(node) {
+      if (node.type === "circle") return { x: node.x, y: node.y };
+      if (node.type === "actor") return { x: node.x, y: node.y + 14 };
+      return { x: node.x + node.w / 2, y: node.y + node.h / 2 };
+    }
+
+    function nodeBounds(node) {
+      if (node.type === "circle") return { left: node.x - node.r, right: node.x + node.r, top: node.y - node.r, bottom: node.y + node.r };
+      if (node.type === "actor") return { left: node.x - 45, right: node.x + 45, top: node.y - 48, bottom: node.y + 68 };
+      return { left: node.x, right: node.x + node.w, top: node.y, bottom: node.y + node.h };
+    }
+
+    function anchor(node, other) {
+      const from = nodeCenter(node);
+      const to = nodeCenter(other);
+      const bounds = nodeBounds(node);
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return { x: dx > 0 ? bounds.right : bounds.left, y: from.y };
+      }
+
+      return { x: from.x, y: dy > 0 ? bounds.bottom : bounds.top };
+    }
+
+    function drawText(parent, lines, x, y, options = {}) {
+      const sizeClass = options.className || "";
+      const fill = options.fill || "var(--ink)";
+      const lineHeight = options.lineHeight || 18;
+      const offset = -((lines.length - 1) * lineHeight) / 2;
+
+      lines.forEach((line, index) => {
+        const text = append("text", {
+          class: `label ${sizeClass}`.trim(),
+          x,
+          y: y + offset + index * lineHeight,
+          fill
+        }, parent);
+        text.textContent = line;
+      });
+    }
+
+    function drawActor(node) {
+      const group = append("g", { class: "node", "data-node-id": node.id });
+      group.appendChild(drawPerson(node.x, node.y));
+      drawText(group, node.label, node.x, node.y + 66, { className: "small", lineHeight: 15, fill: node.textFill });
+      return group;
+    }
+
+    function drawPerson(x, y) {
+      const group = document.createElementNS(ns, "g");
+      const head = document.createElementNS(ns, "circle");
+      head.setAttribute("class", "node-shape");
+      head.setAttribute("cx", x);
+      head.setAttribute("cy", y - 22);
+      head.setAttribute("r", 18);
+      head.setAttribute("fill", "#111827");
+      group.appendChild(head);
+
+      const body = document.createElementNS(ns, "path");
+      body.setAttribute("class", "node-shape");
+      body.setAttribute("d", `M ${x - 36} ${y + 42} C ${x - 30} ${y + 6}, ${x + 30} ${y + 6}, ${x + 36} ${y + 42} Z`);
+      body.setAttribute("fill", "#111827");
+      group.appendChild(body);
+      return group;
+    }
+
+    function drawDatabase(node) {
+      const group = append("g", { class: "node", "data-node-id": node.id });
+      const x = node.x;
+      const y = node.y;
+      const w = node.w;
+      const h = node.h;
+      append("path", {
+        class: "node-shape",
+        d: `M ${x} ${y + 18} C ${x} ${y + 8}, ${x + w} ${y + 8}, ${x + w} ${y + 18} L ${x + w} ${y + h - 18} C ${x + w} ${y + h - 8}, ${x} ${y + h - 8}, ${x} ${y + h - 18} Z`,
+        fill: node.fill
+      }, group);
+      append("ellipse", {
+        class: "node-shape",
+        cx: x + w / 2,
+        cy: y + 18,
+        rx: w / 2,
+        ry: 12,
+        fill: node.fill
+      }, group);
+      drawText(group, node.label, x + w / 2, y + h / 2 + 6, { className: "small", lineHeight: 15, fill: node.textFill });
+      return group;
+    }
+
+    function drawNode(node) {
+      if (node.type === "actor") return drawActor(node);
+      if (node.type === "database") return drawDatabase(node);
+
+      const group = append("g", { class: "node", "data-node-id": node.id });
+      if (node.type === "circle") {
+        append("circle", {
+          class: "node-shape",
+          cx: node.x,
+          cy: node.y,
+          r: node.r,
+          fill: node.fill
+        }, group);
+        drawText(group, node.label, node.x, node.y, { className: "small", lineHeight: 15, fill: node.textFill });
+        return group;
+      }
+
+      append("rect", {
+        class: "node-shape",
+        x: node.x,
+        y: node.y,
+        width: node.w,
+        height: node.h,
+        rx: 4,
+        fill: node.fill
+      }, group);
+      drawText(group, node.label, node.x + node.w / 2, node.y + node.h / 2, { className: "small", lineHeight: 15, fill: node.textFill });
+      return group;
+    }
+
+    function render(viewKey) {
+      const diagram = diagrams[viewKey];
+      const nodesById = new Map(diagram.nodes.map(node => [node.id, node]));
+      root.replaceChildren();
+      svg.setAttribute("viewBox", diagram.viewBox);
+      desc.textContent = diagram.summary;
+      svg.setAttribute("aria-label", diagram.title);
+      heading.textContent = diagram.title;
+      summary.textContent = diagram.summary;
+
+      (diagram.lanes || []).forEach(lane => {
+        append("rect", { class: "lane", x: lane.x, y: lane.y, width: lane.w, height: lane.h, rx: 6 });
+        const text = append("text", { class: "label section", x: lane.x + 18, y: lane.y + 32, fill: "#28364d" });
+        text.textContent = lane.label;
+      });
+
+      (diagram.boundaries || []).forEach(boundary => {
+        append("rect", {
+          class: "boundary",
+          x: boundary.x,
+          y: boundary.y,
+          width: boundary.w,
+          height: boundary.h,
+          rx: 4,
+          fill: boundary.fill
+        });
+        const text = append("text", { class: "label section", x: boundary.x + 16, y: boundary.y + 30, fill: "#28364d" });
+        text.textContent = boundary.label;
+      });
+
+      diagram.links.forEach((link, index) => {
+        append("path", {
+          class: "connector",
+          d: lineFor(link, nodesById),
+          "data-link-id": `link-${index}`,
+          "data-from": link.from,
+          "data-to": link.to
+        });
+      });
+
+      diagram.nodes.forEach(node => {
+        const element = drawNode(node);
+        if (node.note) element.setAttribute("data-note", node.note);
+        if (node.details) element.setAttribute("data-details", JSON.stringify(node.details));
+      });
+
+      wireHover();
+    }
+
+    function wireHover() {
+      const nodes = [...root.querySelectorAll(".node")];
+      const connectors = [...root.querySelectorAll(".connector")];
+
+      function clearHighlight() {
+        nodes.forEach(node => node.classList.remove("is-dimmed", "is-highlight"));
+        connectors.forEach(connector => connector.classList.remove("is-dimmed", "is-highlight"));
+        tooltip.hidden = true;
+      }
+
+      function highlight(id, node, event) {
+        const related = new Set([id]);
+        connectors.forEach(connector => {
+          if (connector.dataset.from === id || connector.dataset.to === id) {
+            related.add(connector.dataset.from);
+            related.add(connector.dataset.to);
+          }
+        });
+
+        nodes.forEach(node => {
+          const nodeId = node.dataset.nodeId;
+          node.classList.toggle("is-highlight", related.has(nodeId));
+          node.classList.toggle("is-dimmed", !related.has(nodeId));
+        });
+
+        connectors.forEach(connector => {
+          const active = connector.dataset.from === id || connector.dataset.to === id;
+          connector.classList.toggle("is-highlight", active);
+          connector.classList.toggle("is-dimmed", !active);
+        });
+
+        if (node.dataset.details || node.dataset.note) {
+          renderTooltip(node);
+          tooltip.hidden = false;
+          moveTooltip(event);
+        }
+      }
+
+      function renderTooltip(node) {
+        tooltip.replaceChildren();
+
+        if (!node.dataset.details) {
+          tooltip.textContent = node.dataset.note || "";
+          return;
+        }
+
+        const details = JSON.parse(node.dataset.details);
+        const title = document.createElement("p");
+        title.className = "tooltip-title";
+        title.textContent = details.title;
+        tooltip.appendChild(title);
+
+        const list = document.createElement("dl");
+        [
+          ["Purpose", details.purpose],
+          ["Bespoke", details.bespoke],
+          ["Current Scalability", details.scalability],
+          ["Plan to Scale", details.scalePlan],
+          ["Geo Redundancy", details.geo],
+          ["Backup", details.backup],
+          ["GDPR", details.gdpr]
+        ].forEach(([term, value]) => {
+          if (!value) return;
+          const dt = document.createElement("dt");
+          dt.textContent = term;
+          const dd = document.createElement("dd");
+          dd.textContent = value;
+          list.append(dt, dd);
+        });
+        tooltip.appendChild(list);
+      }
+
+      function moveTooltip(event) {
+        const gap = 16;
+        const margin = 12;
+        const rect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const hasRoomRight = event.clientX + rect.width + gap + margin <= viewportWidth;
+        const left = hasRoomRight
+          ? event.clientX + gap
+          : Math.max(margin, event.clientX - rect.width - gap);
+        const top = Math.min(
+          Math.max(margin, (viewportHeight - rect.height) / 2),
+          Math.max(margin, viewportHeight - rect.height - margin)
+        );
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+      }
+
+      nodes.forEach(node => {
+        node.addEventListener("mouseenter", event => highlight(node.dataset.nodeId, node, event));
+        node.addEventListener("mousemove", moveTooltip);
+        node.addEventListener("mouseleave", clearHighlight);
+        node.addEventListener("focusin", event => highlight(node.dataset.nodeId, node, event));
+        node.addEventListener("focusout", clearHighlight);
+        node.setAttribute("tabindex", "0");
+      });
+    }
+
+    document.querySelectorAll(".tab-button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab-button").forEach(tab => tab.setAttribute("aria-selected", "false"));
+        button.setAttribute("aria-selected", "true");
+        panel.setAttribute("aria-labelledby", button.id);
+        render(button.dataset.view);
+      });
+    });
+
+    render("logical");
+  </script>
+</body>
+</html>
